@@ -21,39 +21,33 @@ headers = {
     'Referer': 'http://www.shanbay.com/',
     'Accept-Encoding': 'gzip, deflate',
     'Host': 'www.shanbay.com',
+    'DNT': 1,
+    'Connection': 'keep-alive',
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'X-Requested-With': 'XMLHttpRequest',
     'Content-Type': 'application/json; charset=UTF-8',
 }
 #opener.handle_open["http"][0].set_http_debuglevel(1)
 
-recookie = r'__utma=183787513.2091977854.1427359326.1427531029.1427536942.3; __utmz=183787513.1427359326.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); csrftoken=knTmF44uCmfFxfD4aS0xrrKihyUcieM4; sessionid=fldcwgfjmw3fnjkpmad9l6x3g0qlcity; __utmc=183787513; __utmb=183787513.10.10.1427536942; __utmt=1; userid=16474156; language_code=zh-CN'
-
-lmcookie = r'__utma=183787513.2091977854.1427359326.1427549242.1427603481.6; __utmz=183787513.1427359326.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); csrftoken=UztMeDCGsibDvcosbOv19dCG8WoQSpYW; sessionid=0by04k4sto4do3sj2y2r9futtjirfa19; __utmb=183787513.7.10.1427603481; __utmc=183787513; __utmt=1; userid=15137458;'
+recookie = r'__utma=183787513.2091977854.1427359326.1427603481.1427606581.7; __utmz=183787513.1427359326.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); csrftoken=mcI0RVgh8efDI1L4FJB704vqlUiVLXOj; sessionid=osvtxf0v6tsewy6ie6znwb8e9ntzohab; __utmc=183787513; __utmb=183787513.5.10.1427606581; __utmt=1; userid=16474156; language_code=zh-CN'
 
 def getCookieFromFile():
     global headers
     from os import path
     userFolder = path.expanduser('~')
     configFolder = path.join(userFolder, '.lshanbay')
-    configFile = path.join(configFolder, 'cookie.txt')
+    configFile = path.join(configFolder, 'cookie')
     try:
         with open(configFile,'r') as f:
-            cookie = f.read()
+            cookie = f.read().strip('\n')
     except:
         print 'What\'s wrong with your cookie.txt?'
         cookie = ''
-    print cookie
     headers['Cookie'] = cookie
-    print headers['Cookie']
-
-def addHttpHeaders(*request):
-    for name, values in headers.items():
-        request[0].add_header(name, values)
 
 shanbaybdc = 'http://www.shanbay.com/api/v1/bdc/'
 
-def createResponse(url, data={}, method=lambda: 'GET'):
+def getResponse(url, data={}, method=lambda: 'GET'):
     jsdata = json.dumps(data)
     request = urllib2.Request(url,jsdata)
     request.get_method = method
@@ -63,10 +57,8 @@ def createResponse(url, data={}, method=lambda: 'GET'):
     return response
 
 def searchFromShanbay(volcabulary):
-    request = urllib2.Request(shanbaybdc+'search/?word='+volcabulary)
-    addHttpHeaders(request)
     try:
-        response = opener.open(request)
+        response = getResponse(shanbaybdc+'search/?word='+volcabulary)
     except:
         print 'What\'s wrong with your network?'
         return {}
@@ -78,37 +70,32 @@ def searchFromShanbay(volcabulary):
 
 def learnOnShanbay(wordid):
     lvalues = {'id':wordid, 'content_type':'vocabulary'}
-    data = json.dumps(lvalues)
-    print data
-    lrequest = urllib2.Request(shanbaybdc + 'learning/',data)
-    lrequest.get_method = lambda:'POST'
-    addHttpHeaders(lrequest)
     try:
-        response = opener.open(lrequest)
+        response = getResponse(shanbaybdc+'learning/',lvalues,lambda: 'POST')
     except:
         print 'What\'s wrong with your network?'
-        raise
         return {}
     data = json.loads(response.read())
     return data
 
 def relearnOnShanbay(learnid):
     rlvalues = {'retention':1}
-    data = json.dumps(rlvalues)
-    rlrequest = urllib2.Request(shanbaybdc + '/learning/%d' % learnid, data)
-    rlrequest.get_method = lambda:'PUT'
-    addHttpHeaders(rlrequest)
     try:
-        response = opener.open(rlrequest)
+        response = getResponse(shanbaybdc+'learning/%d' % learnid, rlvalues,lambda: 'PUT')
     except:
         print 'What\'s wrong with your network?'
-        raise
         return {}
     data = json.loads(response.read())
     return data
 
 def printhr(userid=''):
-    print '%s%s%s' % ('-'*10, 'UserId: %10s' % userid if userid!='' else '-'*20, '-'*10)
+    print '%s%s%s' % ('-'*10, ' UserId: %10s ' % userid if userid!='' else '-'*20, '-'*10)
+
+def retentionize(val = 0):
+    l = ['▃','▄','▅','▆','▇','█','','','','','']
+    l[val] = chr(48+val)
+    s = '-' + ''.join(l) + '-'
+    return s
 
 def run():
     import sys
@@ -119,8 +106,7 @@ def run():
         volcabulary = raw_input()
     else:
         volcabulary = args[1]
-    global cookie
-    cookie = getCookieFromFile()
+    getCookieFromFile()
 
     data = searchFromShanbay(volcabulary)
     val = data.get('data',{})
@@ -130,20 +116,20 @@ def run():
         print 'Unknow word!'
         printhr()
     else:
-        print '%s> %s [%s]' % ('-'*(val.get('retention',0)+1),volcabulary, val.get('pronunciation','...'))
-        print val.get('definition','Undefined...')
+        print '-> %s [%s] %s' % (val.get('content',volcabulary), val.get('pronunciation','...'),retentionize(val.get('retention',0)) if userid!='' else '')
+        print val.get('definition','Nothing...')
         printhr()
         en_def = val.get('en_definitions',{})
-        examples = en_def.get('n',{})
-        if (len(examples)>0):
-            print 'Example sentence:'
-            for index in xrange(len(examples)):
-                print '- %d: %s' % (index+1, examples[index])
+        en_array = en_def.get('n',{})
+        if (len(en_array)>0):
+            print 'Definitions in English:'
+            for index in xrange(len(en_array)):
+                print '- %d: %s' % (index+1, en_array[index])
             printhr()
         if userid!='':
             learning_id = val.get('learning_id',0)
             s = raw_input('%s for you, learn it? [Y] for yes: '\
-                % ('An old word' if learning_id else 'A new word'))
+                % ('An OLD word' if learning_id else 'A NEW word'))
             if s.lower()=='y':
                 if learning_id!=0:
                     data = relearnOnShanbay(learning_id)
