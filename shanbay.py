@@ -7,7 +7,7 @@ __author__ = 'lmzqwer2'
 Read the volcabulary from shanbay.com
 '''
 
-import cookielib, urllib2, urllib, Cookie
+import cookielib, urllib2, urllib, Cookie, argparse
 try:
     import json
 except ImportError:
@@ -31,12 +31,13 @@ headers = {
 
 recookie = r'__utma=183787513.2091977854.1427359326.1427603481.1427606581.7; __utmz=183787513.1427359326.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); csrftoken=mcI0RVgh8efDI1L4FJB704vqlUiVLXOj; sessionid=osvtxf0v6tsewy6ie6znwb8e9ntzohab; __utmc=183787513; __utmb=183787513.5.10.1427606581; __utmt=1; userid=16474156; language_code=zh-CN'
 
+from os import path
+userFolder = path.expanduser('~')
+configFolder = path.join(userFolder, '.lshanbay')
+configFile = path.join(configFolder, 'cookie')
+
 def getCookieFromFile():
     global headers
-    from os import path
-    userFolder = path.expanduser('~')
-    configFolder = path.join(userFolder, '.lshanbay')
-    configFile = path.join(configFolder, 'cookie')
     try:
         with open(configFile,'r') as f:
             cookie = f.read().strip('\n')
@@ -44,6 +45,14 @@ def getCookieFromFile():
         print 'What\'s wrong with your cookie.txt?'
         cookie = ''
     headers['Cookie'] = cookie
+
+def writeCookieToFile(cookie):
+    try:
+        with open(configFile, 'w') as f:
+            f.write(cookie)
+    except:
+        print 'I can\'t change your cookie file.(%s)' % cookieFile
+    
 
 shanbaybdc = 'http://www.shanbay.com/api/v1/bdc/'
 
@@ -102,10 +111,17 @@ def run():
     reload(sys)
     sys.setdefaultencoding('utf-8')
     args = sys.argv
-    if (len(args)==1):
-        volcabulary = raw_input()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('volcabulary', help='Volcabulary you want to change. ', nargs='?')
+    parser.add_argument('-c', '--cookie', default='cookie', help='Change the cookie storage in the file')
+    pargs = parser.parse_args()
+    if pargs.cookie!='cookie':
+        writeCookieToFile(pargs.cookie)
+        return
+    if pargs.volcabulary is not None:
+        volcabulary = pargs.volcabulary
     else:
-        volcabulary = args[1]
+        volcabulary = raw_input('Input your volcabulary: ')
     getCookieFromFile()
 
     data = searchFromShanbay(volcabulary)
