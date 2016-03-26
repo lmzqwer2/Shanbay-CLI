@@ -42,7 +42,7 @@ def getCookieFromFile():
         with open(configFile,'r') as f:
             cookie = f.read().strip('\n')
     except:
-        print 'What\'s wrong with your cookie.txt?'
+        print 'What\'s wrong with your cookie file?'
         cookie = ''
     headers['Cookie'] = cookie
 
@@ -101,9 +101,13 @@ def printhr(userid=''):
     print '%s%s%s' % ('-'*10, ' UserId: %10s ' % userid if userid!='' else '-'*20, '-'*10)
 
 def retentionize(val = 0):
-    l = ['▃','▄','▅','▆','▇','█','','','','','']
-    l[val] = chr(48+val)
-    s = '-' + ''.join(l) + '-'
+    s = ''
+    if val >= 0 and val <= 5:
+        l = ['▃','▄','▅','▆','▇','█','','','','','']
+        l[val] = chr(48+val)
+        s = '-' + ''.join(l) + '-'
+    else:
+        s = '- Unknown -'
     return s
 
 def run():
